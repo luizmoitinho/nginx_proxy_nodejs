@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  proxy:
+    container_name: nginx_proxy
+    build:
+      context: ./nginx
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - nodejs_mysql
+    ports:
+      - "8080:8080"
+    restart: always
+
+  api:
+    container_name: node_names
+    build:
+      context: ./node
+    volumes:
+      - ./node:/usr/src/app
+    networks:
+      - nodejs_mysql
+    ports:
+      - "3000:3000"
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "node"]
+      start_period: 5s
+      interval: 3s
+      timeout: 7s
+      retries: 20
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    container_name: mysql_db
+    restart: always
+    tty: true
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      MYSQL_DATABASE: node_db
+      MYSQL_USER: node_user
+      MYSQL_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - nodejs_mysql
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u=$$MYSQL_USER --password=$$MYSQL_PASSWORD
+      start_period: 5s
+      interval: 3s
+      timeout: 7s
+      retries: 20
+
+networks:
+ nodejs_mysql:
+  driver: bridge
