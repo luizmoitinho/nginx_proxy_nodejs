@@ -20,6 +20,7 @@ services:
       context: ./node
     volumes:
       - ./node:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - nodejs_mysql
     ports:
